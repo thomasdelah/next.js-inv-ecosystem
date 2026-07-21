@@ -1,0 +1,13 @@
+{
+    "Home": {
+      "header": "Welkom"
+    },
+    "Login": {
+      "header": "Login",
+      "description": "Vul je e-mailadres in om een login link te ontvangen.",
+
+      "formEmailInput": "Email",
+      "formEmailPlaceholder": "Vul je email adres in",
+      "formSubmit": "Verzend email link"
+    }
+}

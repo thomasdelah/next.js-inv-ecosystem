@@ -1,0 +1,32 @@
+{
+  "css.format.spaceAroundSelectorSeparator": true,
+  "editor.formatOnSave": true,
+  "editor.detectIndentation": false,
+  "editor.insertSpaces": true,
+  "editor.tabSize": 2,
+  "files.exclude": {
+    "**/node_modules": true
+  },
+  "files.insertFinalNewline": true,
+  "scss.format.newlineBetweenRules": true,
+  "scss.format.newlineBetweenSelectors": true,
+  "scss.format.spaceAroundSelectorSeparator": true,
+  "svg.preview.background": "transparent",
+  "[json]": {
+    "editor.formatOnSave": false
+  },
+  "[txt]": {
+    "editor.formatOnSave": false
+  },
+  "[svg]": {
+    "editor.formatOnSave": false,
+    "files.insertFinalNewline": false
+  },
+  "cSpell.ignoreWords": [
+    "directus",
+    "themas",
+    "dayjs",
+    "dtos",
+    "brevo"
+  ]
+}
