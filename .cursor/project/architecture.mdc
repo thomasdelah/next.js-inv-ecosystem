@@ -1,0 +1,224 @@
+---
+description: Code architecture — feature layers, data flow, and folder conventions
+alwaysApply: true
+---
+
+# Architecture – Inv Ecosystem
+
+Next.js 16 App Router. Business code lives in **`src/lib/<feature>/`** using a layered structure. **`src/app/`** holds thin route shells only.
+
+See also: `.cursor/project/overview.mdc` for product context.
+
+## Top-level layout
+
+```
+src/
+  app/                    # Routes only — thin pages, layouts, API route handlers
+    (auth)/               # Unauthenticated routes (login)
+    (dashboard)/          # Authenticated app shell
+    api/                  # Route handlers (e.g. auth callback)
+  lib/
+    <feature>/            # Business features (auth, accounts, …)
+      domain/
+      data/
+      presentation/       # Optional — only when sensitive DB data reaches the UI
+      ui/
+    components/ui/        # shadcn primitives (shared, not feature-owned)
+    supabase/             # Supabase clients, proxy, generated types
+    i18n/                 # next-intl config + messages
+    navigation/           # App-wide routes & sidebar (cross-cutting)
+    providers/            # React providers (Query, i18n)
+    hooks/                # Shared hooks
+    utils/                # Shared utilities (non-feature-specific)
+  proxy.ts                # Next.js proxy — session & route guards
+```
+
+### Infrastructure vs features
+
+| Path | Purpose |
+|------|---------|
+| `lib/<feature>/` | Business domain features |
+| `lib/supabase/`, `lib/i18n/`, `lib/providers/`, `lib/components/` | Shared infrastructure |
+| `lib/navigation/` | Cross-cutting routing & shell UI |
+| `lib/utils/` | Generic helpers — prefer feature `presentation/` for display mapping |
+
+**Exception:** `lib/auth/` does not yet follow the full layer pipeline (direct Supabase in ViewModel). Treat as legacy; new features must follow the rules below.
+
+---
+
+## Feature folder structure
+
+For every **new** feature, create folders as files are added:
+
+```
+lib/<feature>/
+  domain/
+    <feature>Models.ts       # Domain types
+    <feature>Service.ts      # Only entry point for UI to get domain data
+  data/
+    <feature>Schemas.ts      # Zod schemas + DTO types
+    <feature>Repository.ts   # Supabase/API queries; validates with Zod
+  presentation/              # Optional — see below
+    <feature>PresentationModels.ts
+    <feature>PresentationMapper.ts
+  ui/
+    <Feature>ViewModel.ts    # Client: useFeatureViewModel
+    createFeatureViewModel.ts  # Server: async factory (when needed)
+    *.tsx                    # Presentational components
+```
+
+Do **not** force empty files. Create each layer when the feature needs it — except `presentation/`, which is only added when sensitive database fields require filtering before the UI.
+
+---
+
+## Layer responsibilities
+
+### `domain/`
+
+- **Models** (`<feature>Models.ts`) — app-owned types returned to the UI pipeline
+- **Service** (`<feature>Service.ts`) — orchestrates repository + mapping; **the only layer UI ViewModels may call** for business data
+- Pure business logic allowed (calculations, rules) — no React, no Supabase imports
+
+### `data/`
+
+- **Schemas** (`<feature>Schemas.ts`) — Zod schemas and inferred DTO types
+- **Repository** (`<feature>Repository.ts`) — all database/API access; responses **must** be validated with Zod from schemas
+- Maps validated DTOs → domain models (mapper function colocated in `data/` or consumed by service — never skip validation)
+
+### `presentation/` (optional)
+
+Use **only** when repository/domain data contains fields that must **not** reach the UI (PII, internal IDs, permissions raw flags, etc.).
+
+- **PresentationModels** — safe subset for UI consumption
+- **PresentationMapper** — domain model → presentation model
+- ViewModels receive presentation models, not raw domain/repository shapes
+
+When data is not sensitive, pass domain models from the service directly — skip this layer.
+
+### `ui/`
+
+- **ViewModels** — bridge between UI and `domain/*Service.ts`
+  - Client components: `use<Feature>ViewModel()` hook
+  - Server components: `create<Feature>ViewModel()` async factory
+- **Components** — presentational; **no direct Supabase, repository, or service calls**
+- ViewModels required for **complex** screens: forms, mutations, client state, TanStack Query. Simple static server pages may skip a ViewModel.
+
+User-facing strings via **`next-intl`** — not hardcoded in components.
+
+---
+
+## Data flow
+
+```
+┌─────────────────┐
+│  Repository     │  Supabase/API query
+│  (data/)        │  → validate with Zod (data/*Schemas.ts)
+└────────┬────────┘
+         │ DTO → domain model
+         ▼
+┌─────────────────┐
+│  Service        │  domain/*Service.ts — single UI entry point
+│  (domain/)      │
+└────────┬────────┘
+         │ optional if sensitive
+         ▼
+┌─────────────────┐
+│  Presentation   │  presentation/*Mapper.ts → safe UI model
+│  (presentation/)│
+└────────┬────────┘
+         ▼
+┌─────────────────┐
+│  ViewModel      │  use* / create* (ui/)
+│  (ui/)          │
+└────────┬────────┘
+         ▼
+┌─────────────────┐
+│  Components     │  *.tsx (ui/)
+└─────────────────┘
+```
+
+### Rules
+
+1. **Repository** is the only place that talks to Supabase/API for feature data
+2. **Zod validation** happens on every repository response before mapping
+3. **Service** is the only import from `domain/` that ViewModels use
+4. **Presentation** sits between service and ViewModel when stripping sensitive fields
+5. **Components** only consume ViewModel output (or server ViewModel props)
+
+---
+
+## `src/app/` — thin routes
+
+Pages and layouts in `app/` should:
+
+- Define `metadata` / `generateMetadata`
+- Compose components from `lib/<feature>/ui/`
+- Avoid business logic, Supabase calls, and Zod schemas
+
+Example:
+
+```tsx
+// app/(dashboard)/profile/page.tsx
+export default function ProfilePage() {
+  return <ProfileScreen />;  // from lib/profile/ui/
+}
+```
+
+Route groups:
+
+| Group | Purpose |
+|-------|---------|
+| `(auth)/` | Login and other public auth pages |
+| `(dashboard)/` | Authenticated layout (sidebar + content) |
+
+API routes in `app/api/` may use Supabase server client directly for infrastructure concerns (e.g. OAuth callback) — not for feature business queries; those belong in repositories.
+
+---
+
+## Naming conventions
+
+| Artifact | Pattern | Example |
+|----------|---------|---------|
+| Domain models | `<feature>Models.ts` | `accountModels.ts` |
+| Domain service | `<feature>Service.ts` | `accountService.ts` |
+| Zod schemas / DTOs | `<feature>Schemas.ts` | `accountSchemas.ts` |
+| Repository | `<feature>Repository.ts` | `accountRepository.ts` |
+| Presentation models | `<feature>PresentationModels.ts` | `accountPresentationModels.ts` |
+| Presentation mapper | `<feature>PresentationMapper.ts` | `accountPresentationMapper.ts` |
+| Client ViewModel | `use<Feature>ViewModel.ts` or `<Feature>ViewModel.ts` | `AuthViewModel.ts` → prefer `useAccountViewModel` for new features |
+| UI components | PascalCase `.tsx` | `AccountList.tsx` |
+
+---
+
+## Shared patterns
+
+| Concern | Location |
+|---------|----------|
+| Route paths | `lib/navigation/domain/routes.ts` |
+| Auth session / guards | `lib/supabase/proxy.ts` + `src/proxy.ts` |
+| DB types | `lib/supabase/types.ts` (Supabase CLI generated) |
+| Translations | `lib/i18n/messages/nl.json` |
+| UI primitives | `lib/components/ui/` (shadcn) |
+
+---
+
+## Do not
+
+- Call Supabase directly from `ui/` components or ViewModels — go through repository → service
+- Skip Zod validation on repository responses
+- Put business logic in `app/` pages
+- Put feature-specific mappers in `lib/utils/` — use `presentation/` or feature `data/`
+- Hand-write `lib/supabase/types.ts` — use Supabase CLI (see `database-supabase.mdc`)
+- Add new code to `lib/auth/` that bypasses the layered pattern unless explicitly refactoring auth
+
+## Adding a new feature (checklist)
+
+1. Create `lib/<feature>/` with `domain/`, `data/`, `ui/` folders
+2. Add `data/<feature>Schemas.ts` + `<feature>Repository.ts`
+3. Add `domain/<feature>Models.ts` + `<feature>Service.ts`
+4. Add `presentation/` only if UI must not see full domain data
+5. Add `ui/` ViewModel + components
+6. Add thin page under `app/(dashboard)/`
+7. Add routes to `lib/navigation/domain/routes.ts`
+8. Add i18n keys to `lib/i18n/messages/nl.json`
+9. Add `.cursor/features/feature-<name>.mdc` when the feature is scoped

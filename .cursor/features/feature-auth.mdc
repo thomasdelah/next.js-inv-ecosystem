@@ -1,0 +1,128 @@
+---
+description: Auth feature conventions — magic link login, session, user identity
+globs: src/lib/auth/**,src/app/(auth)/**,src/app/api/callback/auth/**
+alwaysApply: false
+---
+
+# Auth – Inv Ecosystem
+
+Passwordless authentication via Supabase magic link (OTP email). Session is cookie-based; route protection runs in the proxy layer.
+
+See also: `.cursor/database-supabase.mdc` for Supabase clients, callback flow, and env vars.
+
+## Product decisions
+
+| Topic | Decision |
+|-------|----------|
+| **User access** | Invite-only — users must already exist in Supabase (`shouldCreateUser: false`) |
+| **Roles / permissions** | TBD — all authenticated users have equal access for now |
+| **Profile data** | Supabase Auth metadata only (`user_metadata` / `app_metadata`); no `profiles` table yet |
+| **Post-login redirect** | `/profile` |
+| **Post-logout redirect** | `/login` |
+| **Email restrictions** | TBD |
+| **Auth errors UX** | Translated inline messages on login page **and** toast notifications |
+| **In-app user management** | Planned later — manage users in Supabase Dashboard for now |
+
+## Current state
+
+### Implemented
+
+- Magic link login (`signInWithOtp`) via `AuthViewModel`
+- Auth callback route (`/api/callback/auth`) — code exchange + redirect to `next`
+- Proxy route protection — public: `/login`, `/api/callback/auth`
+- Logout from sidebar footer dropdown
+- Current user fetched via TanStack Query in `AuthViewModel`
+- Login form UI with `next-intl` (`Login.*` keys)
+- Sidebar footer shows user email + logout
+
+### Not implemented yet
+
+- Login success feedback (toast / “check your email” state) — see `@todo` in `AuthViewModel`
+- Translated auth error handling on login page (`?error=` from callback)
+- Toast notifications for auth events
+- Explicit redirect to `/login` after logout (currently `router.refresh()` + proxy)
+- Roles / permissions
+- In-app admin user management UI
+- `domain/` models and `presentation/` mappers (files exist but are empty)
+- Email allowlist / domain restrictions (if decided later)
+
+## Folder structure
+
+| Layer | Path | Responsibility |
+|-------|------|----------------|
+| `domain/` | `authModels.ts` | Domain types (user, session shapes) |
+| `data/` | `authSchemas.ts` | Zod schemas & DTOs for forms/API |
+| `presentation/` | `userPresentationMapper.ts` | Map Supabase `User` → UI display model |
+| `ui/` | Components & ViewModels | React UI; hooks like `useAuthViewModel` |
+
+## Conventions
+
+### ViewModels
+
+- Auth UI logic lives in `src/lib/auth/ui/AuthViewModel.ts`
+- Presentational components (`LoginForm`, sidebar footer) stay thin — consume the ViewModel, no direct Supabase calls
+- Use TanStack Query for reading the current user (`queryKey: ["auth", "user"]`)
+- On logout: `signOut()` → clear query cache → redirect/refresh
+
+### Supabase auth
+
+- Client-side auth calls use `@/lib/supabase/client`
+- Server callback uses `@/lib/supabase/server`
+- Magic link redirect URL:
+  ```
+  ${NEXT_PUBLIC_SITE_URL}/api/callback/auth?next=/profile
+  ```
+- Keep `shouldCreateUser: false` until open signup is an explicit product decision
+
+### User identity & profile
+
+- Source of truth: Supabase Auth user (`user.id`, `user.email`, metadata)
+- Do **not** create a `profiles` table unless the product decision changes
+- Display helpers (initials, display name from email) live in `src/lib/utils/format-utils.ts` until moved to `userPresentationMapper.ts`
+
+### Routes
+
+- Define auth routes in `src/lib/navigation/domain/routes.ts` — do not hardcode paths in components
+- Public routes must stay in sync with `src/lib/supabase/proxy.ts`
+
+### i18n
+
+- All user-facing auth copy goes in `src/lib/i18n/messages/nl.json`
+- Namespaces: `Login.*`, `Sidebar.Footer.*`, future `Auth.errors.*` for callback/login errors
+
+## Key files
+
+| File | Purpose |
+|------|---------|
+| `src/lib/auth/ui/AuthViewModel.ts` | Login, logout, current user |
+| `src/lib/auth/ui/LoginForm.tsx` | Login page form |
+| `src/lib/navigation/ui/Sidebar/SiteSidebarFooter.tsx` | User menu + logout |
+| `src/app/api/callback/auth/route.ts` | Magic link callback |
+| `src/lib/supabase/proxy.ts` | Session refresh + route guards |
+| `src/app/(auth)/login/page.tsx` | Login page shell |
+
+## Auth flow
+
+```
+Login page → signInWithOtp(email)
+  → User clicks magic link in email
+  → GET /api/callback/auth?code=…&next=/profile
+  → exchangeCodeForSession(code)
+  → Redirect to /profile
+
+Logout → signOut() → clear user cache → redirect to /login
+```
+
+## When adding user management later
+
+1. Confirm roles model (admin vs user, or RBAC) before implementing guards
+2. Decide if `profiles` table is needed alongside auth metadata
+3. Admin UI belongs under a new feature module; keep invite-only flow unless registration decision changes
+4. Any new public routes must be added to `isPublicRoute` in the proxy
+
+## Do not
+
+- Hand-write Supabase user types — use auth types from `@supabase/supabase-js` until a profiles schema exists
+- Use `service_role` key in client or browser-reachable routes
+- Duplicate Supabase client setup — reuse `@/lib/supabase/*` helpers
+- Add hardcoded UI strings — use `next-intl`

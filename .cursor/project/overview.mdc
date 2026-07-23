@@ -1,0 +1,76 @@
+---
+description: Project objective, audience, and scope for Inv Ecosystem
+alwaysApply: true
+---
+
+# Inv Ecosystem
+
+## One-liner
+
+An in-house investment platform that gives investors (LPs) a single authenticated place to view consolidated investment and portfolio data.
+
+## Problem
+
+Investment-related data is fragmented across sources. Inv Ecosystem should bring that data together so LPs can access what they need without switching tools or relying on ad-hoc reports.
+
+## Audience
+
+- **Primary:** Investors / LPs (limited partners)
+- **Secondary:** TBD (internal team workflows may be added later)
+
+## Core goals
+
+1. Provide secure, login-only access for authorized investors
+2. Consolidate investment and portfolio data in one application
+3. Start with **accounts** as the first business domain after the app foundation
+4. Deliver a Dutch-first UI with English planned later
+
+## Non-goals (for now)
+
+Not formally defined yet. Revisit as features are scoped.
+
+## Current phase
+
+**Foundation** — auth, dashboard shell, project conventions, and Cursor rules are in place. No business data or Supabase tables yet.
+
+### Done
+
+- Magic link auth (invite-only)
+- Dashboard layout with sidebar
+- Profile page shell
+- i18n setup (Dutch primary)
+
+### Next
+
+- Accounts feature (first MVP business module)
+- Supabase schema + generated types
+- Business data models and UI
+
+## Access & deployment
+
+- Hosted online; **entire app requires authentication** (no public pages)
+- Invite-only user access — users must exist in Supabase before login
+
+## Stack
+
+- Next.js 16 (App Router), React 19
+- Supabase (auth + planned database)
+- shadcn/ui, TanStack Query, next-intl
+- TypeScript, Zod, React Hook Form
+
+## Related Cursor rules
+
+| Topic | File |
+|-------|------|
+| Auth | `.cursor/features/feature-auth.mdc` |
+| Accounts (planned) | `.cursor/features/feature-accounts.mdc` |
+| Supabase | `.cursor/database-supabase.mdc` |
+| Architecture | `.cursor/project/architecture.mdc` |
+| Roadmap | `.cursor/project/roadmap.mdc` |
+| Glossary | `.cursor/project/glossary.mdc` |
+
+## Open questions
+
+- Exact scope of the **accounts** feature (entities, holdings, fund structure — to be defined in `feature-accounts.mdc`)
+- Whether internal ecosystem team members will also log in, or only LPs
+- Non-goals once MVP scope is clearer

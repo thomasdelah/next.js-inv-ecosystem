@@ -1,0 +1,134 @@
+---
+description: Delivery roadmap — phases, priorities, and v0.1 scope
+alwaysApply: true
+---
+
+# Roadmap – Inv Ecosystem
+
+Priority-ordered plan. **No fixed deadline** — sequence matters more than dates.
+
+First meaningful release: **v0.1**
+
+See also: `.cursor/project/overview.mdc`, `.cursor/project/glossary.mdc`
+
+---
+
+## Done (foundation)
+
+- Magic link auth (invite-only)
+- Dashboard shell (sidebar + layout)
+- Profile page shell
+- i18n setup (Dutch primary)
+- Project Cursor rules (overview, architecture, glossary, auth, Supabase)
+- Layered feature architecture defined
+
+---
+
+## Now
+
+Focus shift from foundation → **Accounts v0.1** and database setup.
+
+| Item | Notes |
+|------|-------|
+| **Supabase migrations** | First schema for accounts, holdings, positions |
+| **Type generation** | `supabase gen types` → `src/lib/supabase/types.ts` |
+| **Accounts feature module** | `lib/accounts/` following architecture layers |
+| **Auth refactor** (parallel) | Align `lib/auth/` with repository → service → ViewModel pattern when touching auth |
+
+Auth UX polish (email-sent state, error toasts) is **not blocking** v0.1 — can follow after or in parallel if needed.
+
+---
+
+## v0.1 — Accounts (first release)
+
+### Goal
+
+LPs can view **financial/custody accounts** with holdings, positions, and allocation — consolidated in one place.
+
+### In scope
+
+| Deliverable | Description |
+|-------------|-------------|
+| **Account list** | Overview of accounts the user can access |
+| **Account detail** | Read-only detail for a selected account |
+| **Search & filters** | Find accounts in the list |
+| **Holdings & positions** | Overview of holdings and positions for a specific account |
+| **Allocation view** | Show allocation across different accounts |
+| **User ↔ account access** | Many users → one account (read access per linked account) |
+
+### Out of scope for v0.1
+
+- Create / edit / delete accounts in UI
+- Internal team login (comes after v0.1)
+- Role-based permissions beyond basic account linking
+- Documents, funds, portfolio companies as separate modules
+- English UI
+
+### Data sources (v0.1)
+
+Combined approach:
+
+1. **Manual / seed data in Supabase** — bootstrap and fallback
+2. **External provider APIs** — banks and brokers, e.g.:
+   - Banks: KBC, BNP Paribas, …
+   - Brokers: Saxo Invest, DEGIRO, …
+
+Provider integrations can be phased — start with schema + manual data, add APIs incrementally.
+
+### Technical deliverables
+
+- `feature-accounts.mdc` scoped and kept in sync
+- Repository + Zod schemas + service + UI ViewModels
+- RLS policies on account-related tables
+- Monitoring in place as integrations grow
+
+---
+
+## After v0.1 (priority order)
+
+1. **User ↔ account permissions** — fine-grained access (who sees which account, read vs manage)
+2. **Internal team login** — ecosystem team users; roles TBD (admin, read-only, …)
+3. **Profile** — expand beyond shell (preferences, user settings)
+4. **Documents / reports** — TBD when product is scoped
+5. **Funds / portfolio companies / NAV** — TBD when data model grows
+
+English i18n — when Dutch v0.1 is stable.
+
+---
+
+## Infrastructure roadmap
+
+| Item | When |
+|------|------|
+| **Supabase migrations** | Now — with Accounts schema |
+| **Type generation workflow** | Now — after each schema change |
+| **Monitoring / logging** | Now / early v0.1 — especially before provider API integrations |
+| Staging environment | TBD |
+| Production deployment | TBD |
+
+---
+
+## Non-goals
+
+Not formally defined yet. Revisit when scoping post–v0.1 features.
+
+---
+
+## Open decisions
+
+- Exact provider API integration order (KBC vs Saxo vs DEGIRO first)
+- Account schema shape (holdings, positions, allocation model)
+- Permission model details (post–v0.1)
+- Internal team roles
+- Staging / production deploy timeline
+
+---
+
+## Related rules
+
+| Phase | Rule file |
+|-------|-----------|
+| Accounts build | `.cursor/features/feature-accounts.mdc` |
+| Auth | `.cursor/features/feature-auth.mdc` |
+| Supabase / DB | `.cursor/database-supabase.mdc` |
+| Code structure | `.cursor/project/architecture.mdc` |

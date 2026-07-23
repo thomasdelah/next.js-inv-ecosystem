@@ -1,0 +1,202 @@
+---
+description: Accounts feature — financial accounts, holdings, allocation (v0.1)
+globs: src/lib/accounts/**,src/app/(dashboard)/accounts/**
+alwaysApply: false
+---
+
+# Accounts – Inv Ecosystem
+
+Financial / custody / capital **accounts** (bank, broker, cash) with **holdings** and **asset-class allocation** across accounts. First business feature — **v0.1**.
+
+See also:
+- `.cursor/project/glossary.mdc` — Account vs User vs Profile
+- `.cursor/project/roadmap.mdc` — v0.1 scope & priorities
+- `.cursor/project/architecture.mdc` — layer rules
+- `.cursor/database-supabase.mdc` — migrations, types, RLS
+
+## Product decisions (v0.1)
+
+| Topic | Decision |
+|-------|----------|
+| **Account types** | Bank, broker, cash |
+| **Holdings vs positions** | Same concept — use **Holdings** in code/UI; do not model separate “positions” entity unless requirements change |
+| **Allocation view** | By **asset class** (equities, bonds, cash, …) aggregated across accounts |
+| **Account list fields** | Name, provider, total value, currency |
+| **User ↔ account access** | v0.1 via Supabase **`app_metadata`** (which account IDs a user may access). Join table + admin UI later. |
+| **Data sources** | Manual/seed in Supabase + **sync job stub** for future provider APIs (KBC, BNP, Saxo, DEGIRO, …) |
+| **CRUD** | Read-only in UI for v0.1 |
+| **Presentation layer** | **Yes** — filter sensitive fields before UI |
+| **Sensitive fields** | Internal UUIDs, sync/API tokens, provider external IDs / account numbers |
+
+## Current state
+
+### Not implemented yet
+
+- `src/lib/accounts/` feature module
+- Supabase schema (accounts, holdings, user access)
+- Routes `/accounts`, `/accounts/[id]`
+- Provider API integrations (stub/sync job only)
+- i18n keys under `Accounts.*`
+
+### Planned routes (v0.1)
+
+| Route | Purpose |
+|-------|---------|
+| `/accounts` | Account list + search/filters |
+| `/accounts/[id]` | Account detail + holdings for that account |
+
+Additional routes (e.g. dedicated allocation page) — **not defined yet**. Asset-class allocation may live on list summary or detail until a separate route is scoped.
+
+Register paths in `lib/navigation/domain/routes.ts`.
+
+---
+
+## Domain model (conceptual)
+
+```
+Account
+  ├── id, name, type (bank | broker | cash)
+  ├── provider (KBC, Saxo, DEGIRO, …)
+  ├── totalValue, currency
+  └── holdings[]
+
+Holding
+  ├── asset name / identifier (ISIN, ticker — TBD in schema)
+  ├── quantity, value, currency
+  └── assetClass (equities | bonds | cash | … — TBD enum)
+
+Allocation (computed)
+  └── assetClass → % of total across all accessible accounts
+```
+
+Exact columns TBD in first migration. Regenerate `lib/supabase/types.ts` after schema lands.
+
+---
+
+## User access (v0.1)
+
+- **Many users → one account** (see glossary)
+- v0.1: store allowed `account_ids` (or equivalent) in Supabase Auth **`app_metadata`**
+- Repository must filter accounts/holdings to those the current user may access
+- RLS on tables must enforce the same rules — do not rely on UI filtering alone
+- Post–v0.1: proper join table + permissions (see roadmap)
+
+---
+
+## Folder structure
+
+Follow `.cursor/project/architecture.mdc`:
+
+```
+lib/accounts/
+  domain/
+    accountModels.ts
+    accountService.ts
+  data/
+    accountSchemas.ts      # Zod + DTOs (DB/API shapes)
+    accountRepository.ts   # Supabase queries; validate responses
+  presentation/
+    accountPresentationModels.ts
+    accountPresentationMapper.ts   # Strip UUIDs, provider IDs, tokens
+  ui/
+    useAccountsViewModel.ts          # List page (client, if needed)
+    createAccountDetailViewModel.ts  # Detail (server, if needed)
+    AccountList.tsx
+    AccountDetail.tsx
+    …
+```
+
+Sync job stub (future provider pull) — prefer `data/accountSyncJob.ts` or `data/providers/` subfolder; not in `ui/`.
+
+---
+
+## Data flow
+
+```
+accountRepository (validate with accountSchemas)
+  → map DTO → domain models
+  → accountService (filter by user access from app_metadata)
+  → accountPresentationMapper (remove sensitive fields)
+  → ViewModel
+  → Components
+```
+
+**Repository** is the only layer that queries Supabase for account data.
+
+---
+
+## Provider integrations (phased)
+
+| Phase | Approach |
+|-------|----------|
+| **v0.1** | Seed/manual data in Supabase; sync job **stub** (structure only, no live KBC/Saxo/DEGIRO calls required for first UI) |
+| **Later** | Incremental API integrations per provider; never expose provider tokens to client |
+
+Provider external IDs stored in DB but **not** passed to UI (presentation layer).
+
+---
+
+## UI & i18n
+
+- Dutch copy via `nl.json` — namespace **`Accounts.*`** (list, detail, filters, asset classes, empty states)
+- Code/types in English
+- List supports **search & filters** (fields TBD — likely name, provider, type)
+
+### Allocation (asset class)
+
+- Show breakdown by asset class across all accounts the user can access
+- Exact UI placement TBD (list header, detail section, or future `/accounts/allocation`)
+
+---
+
+## Security
+
+- RLS on `accounts`, `holdings`, and any join/access tables
+- Presentation mapper required for all UI-bound account data
+- Never return `sync_tokens`, provider credentials, or raw provider payloads to ViewModels/components
+- Provider sync runs server-side only (route handler, edge function, or background job — TBD)
+
+---
+
+## Key files (to create)
+
+| File | Purpose |
+|------|---------|
+| `supabase/migrations/*_accounts.sql` | Schema + RLS |
+| `lib/accounts/data/accountRepository.ts` | DB access |
+| `lib/accounts/domain/accountService.ts` | Access filtering + orchestration |
+| `lib/accounts/presentation/accountPresentationMapper.ts` | Safe UI models |
+| `app/(dashboard)/accounts/page.tsx` | Thin list route |
+| `app/(dashboard)/accounts/[id]/page.tsx` | Thin detail route |
+
+---
+
+## Out of scope (v0.1)
+
+- Account create/edit/delete in UI
+- Fine-grained permissions (read vs manage)
+- Internal team-specific views
+- Live bank/broker API sync (stub only)
+- Dedicated allocation route (until defined)
+- English UI
+
+---
+
+## Open decisions
+
+- Exact `app_metadata` shape for account access
+- Holding fields (ISIN, ticker, units, market value)
+- Asset class enum values
+- Where asset-class allocation renders in UI
+- Sync job runtime (Next.js cron, Supabase Edge Function, external worker)
+- First provider to integrate after manual seed
+
+---
+
+## Do not
+
+- Call Supabase from `ui/` components — use repository → service → ViewModel
+- Skip Zod validation on repository responses
+- Expose internal UUIDs or provider IDs in UI models
+- Hand-write DB types — use Supabase CLI
+- Conflate **Account** (financial) with **User** (auth) or **Profile** (personal page)

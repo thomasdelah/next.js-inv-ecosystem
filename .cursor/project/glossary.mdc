@@ -1,0 +1,109 @@
+---
+description: Domain and project terminology — Inv Ecosystem
+alwaysApply: true
+---
+
+# Glossary – Inv Ecosystem
+
+Shared vocabulary for product, domain, and code. Use these terms consistently in features, UI copy (i18n), and Cursor rules.
+
+---
+
+## Product
+
+| Term | Definition |
+|------|------------|
+| **Inv Ecosystem** | Working title for this application — may change. An in-house platform for consolidated investment data. |
+| **Dashboard** | Authenticated app shell after login (`(dashboard)` route group) — sidebar + content. UI label: **Dashboard** (via i18n). |
+
+---
+
+## People & access
+
+| Term | Definition |
+|------|------------|
+| **LP** | **Limited Partner** — external fund investor; primary audience. Internal team members may also log in later with separate roles (TBD). Keep **LP** as-is in Dutch UI where it is standard industry terminology. |
+| **User** | Person authenticated via Supabase Auth (magic link). Invite-only. A **User** is not the same as a business **Account**. |
+| **Account** | **Financial / custody / capital account** — a business entity in the platform representing financial account data (first MVP feature). Not the auth user and not the `/profile` page. |
+| **Profile** | Personal user page (`/profile`) — own settings and info (e.g. email). Separate from **Account**. |
+
+### User ↔ Account relationship
+
+**Many users → one account.** Multiple authenticated users can access the same account (e.g. a team sharing one LP's financial account view). Exact linking model TBD in `feature-accounts.mdc`.
+
+---
+
+## Auth & session
+
+| Term | Definition |
+|------|------------|
+| **Magic link** | Passwordless login — user receives an email link; session created via `/api/callback/auth`. UI copy in Dutch (e.g. inloglink) via i18n; keep **magic link** in technical docs. |
+| **Invite-only** | No self-registration (`shouldCreateUser: false`). Users must exist in Supabase before they can log in. |
+| **Session** | Cookie-based auth state — Supabase SSR + proxy. |
+
+---
+
+## Language conventions
+
+| Context | Rule |
+|---------|------|
+| **Code** | English — file names, types, variables, comments |
+| **UI** | Dutch primary via `nl.json`; English planned later |
+| **Domain terms in UI** | Dutch labels where natural; keep standard industry terms (**LP**, **NAV**, etc.) as-is when commonly used in Dutch investor context |
+| **Docs / Cursor rules** | English |
+
+---
+
+## Code & architecture terms
+
+Project conventions — details in `.cursor/project/architecture.mdc`.
+
+| Term | Definition |
+|------|------------|
+| **Feature** | Business module under `src/lib/<feature>/` (e.g. `auth`, `accounts`) |
+| **Repository** | `data/*Repository.ts` — Supabase/API queries; Zod-validated responses |
+| **Service** | `domain/*Service.ts` — only layer ViewModels call for business data |
+| **ViewModel** | `ui/*ViewModel.ts` — `use*` (client) or `create*` (server) |
+| **DTO** | Shape from API/DB — `data/*Schemas.ts` |
+| **Domain model** | App type in `domain/*Models.ts` |
+| **Presentation model** | Safe UI subset when domain data includes sensitive fields |
+
+---
+
+## Terms to avoid (ambiguous)
+
+| Avoid | Prefer |
+|-------|--------|
+| **Account** for Supabase Auth person | **User** (auth) vs **Account** (financial/custody account) |
+| **Account** for `/profile` | **Profile** (personal page) vs **Account** (business entity) |
+| **Login** / **Sign in** mixed in UI | One term per locale in i18n (`Login.*`) |
+| Direct Supabase calls in `ui/` | **Repository** → **Service** → **ViewModel** |
+
+---
+
+## Not in scope yet
+
+Do not assume definitions for these until added to the glossary and `feature-*.mdc`:
+
+- Fund, portfolio company (*participatie*), holding/SPV
+- Commitment, capital call, NAV/valuation
+- Documents/reports
+
+Define when the data model and features are scoped.
+
+---
+
+## Related rules
+
+- `.cursor/project/overview.mdc`
+- `.cursor/project/architecture.mdc`
+- `.cursor/features/feature-accounts.mdc` (account feature detail)
+- `.cursor/features/feature-auth.mdc`
+
+---
+
+## Open (TBD)
+
+- Internal team roles when they can log in (admin vs read-only, etc.)
+- Exact schema linking **User** ↔ **Account** (join table, permissions)
+- Final product name if **Inv Ecosystem** is renamed

@@ -1,0 +1,77 @@
+---
+description: Supabase and database conventions for this project
+globs: src/lib/supabase/**,src/app/api/**,supabase/**,src/lib/auth/**
+alwaysApply: false
+---
+
+# Supabase – Inv Ecosystem
+
+Supabase is the backend for this project: **auth and database**. Auth (magic link) is implemented; **database tables have not been created yet**. `src/lib/supabase/types.ts` is empty until the first schema is added.
+
+## Current state
+
+- **Auth:** magic link via `signInWithOtp`, session cookies, proxy route protection
+- **Database:** no tables, views, or functions yet — schema still to be defined
+
+## Clients – which helper where?
+
+| Context | Import | Usage |
+|---------|--------|-------|
+| Client Components | `@/lib/supabase/client` | Browser; e.g. `AuthViewModel` |
+| Server Components / Route Handlers | `@/lib/supabase/server` | `createClient(await cookies())` |
+| Proxy (Next.js 16) | `@/lib/supabase/proxy` | `updateSession` in `src/proxy.ts` |
+
+Rules:
+- Always use `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — not `ANON_KEY` or other key names.
+- Do not duplicate `createServerClient` setup; reuse the existing helpers.
+
+## Auth flow
+
+1. Login: `signInWithOtp` in `src/lib/auth/ui/AuthViewModel.ts`
+2. Magic link redirect:
+   ```
+   ${NEXT_PUBLIC_SITE_URL}api/callback/auth?next=/profile
+   ```
+   Note the `/` between the site URL and path. The URL must be whitelisted in Supabase Dashboard → Authentication → Redirect URLs.
+3. Callback: `GET /api/callback/auth` exchanges `code` via `exchangeCodeForSession` and redirects to `next`.
+4. On failure: redirect to `/login?error=...`
+
+## Proxy / route protection
+
+Public routes (no session required):
+- `/login`
+- `/api/callback/auth`
+
+All other routes: redirect to `/login` when there is no user. Logged-in users on public auth routes → redirect to `/`.
+
+## Environment variables
+
+```
+NEXT_PUBLIC_SITE_URL=
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+```
+
+Do not commit secrets. `.env.local` is local only.
+
+## Database
+
+When adding tables:
+1. Define schema via Supabase migrations in `supabase/migrations/`
+2. Always enable RLS on user-owned or sensitive data
+3. Regenerate TypeScript types with the **Supabase CLI** (do not hand-write `types.ts`)
+4. Type queries with `Database` from `types.ts`
+5. Prefer server-side queries in Route Handlers or Server Components where possible
+6. Client-side queries only where RLS policies explicitly allow it
+
+### Type generation (Supabase CLI)
+
+Use the Supabase CLI to generate types after schema changes. Output goes to `src/lib/supabase/types.ts`:
+
+```bash
+supabase gen types typescript --linked > src/lib/supabase/types.ts
+```
+
+If the project is not linked locally, use `--project-id` instead of `--linked`.
+
+The `supabase` package is available as a dev dependency (`yarn supabase` or `npx supabase`).
