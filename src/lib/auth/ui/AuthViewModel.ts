@@ -17,7 +17,7 @@ export default function useAuthViewModel() {
   const router = useRouter()
   const queryClient = useQueryClient()
 
-  // Login with Magic Link
+  // React Hook Form for login form
   const {
     register,
     handleSubmit
@@ -28,6 +28,7 @@ export default function useAuthViewModel() {
     }
   })
 
+  // Login with Magic Link
   const onLogin: SubmitHandler<{ email: string }> = async (data) => {
     const { error } = await supabase.auth.signInWithOtp({
       email: data.email,
@@ -37,8 +38,11 @@ export default function useAuthViewModel() {
       }
     })
     if (error) throw new Error(error.message)
+
+    // @todo: Add toast to notify user that message has been sent / update login form with email sent card
   }
 
+  // Tanstack query to retrieve auth user
   const { data: user } = useQuery({
     queryKey: ["auth", "user"],
     queryFn: async () => {
@@ -47,6 +51,7 @@ export default function useAuthViewModel() {
     },
   })
 
+  // Logout
   const onLogout = async () => {
     const { error } = await supabase.auth.signOut()
     if (error) throw new Error(error.message)

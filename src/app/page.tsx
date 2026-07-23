@@ -1,4 +1,3 @@
-import LogoutButton from "@/lib/auth/ui/LogoutButton";
 import routes from "@/lib/navigation/domain/routes";
 import { redirect } from "next/navigation";
 

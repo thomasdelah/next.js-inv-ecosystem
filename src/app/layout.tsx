@@ -10,9 +10,11 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-// To be added
 export const metadata: Metadata = {
-  title: "",
+  title: {
+    template: "%s - Inv Ecosystem",
+    default: "Inv Ecosystem",
+  },
   description: "",
 };
 

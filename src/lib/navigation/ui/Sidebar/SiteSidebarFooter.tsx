@@ -21,10 +21,7 @@ import {
   useSidebar,
 } from "@/lib/components/ui/sidebar"
 import { useTranslations } from "next-intl"
-
-function getUserInitials(email: string) {
-  return email.slice(0, 2).toUpperCase()
-}
+import formatUtils from "@/lib/utils/format-utils"
 
 export default function SiteSidebarFooter() {
   const viewModel = useAuthViewModel()
@@ -45,7 +42,6 @@ export default function SiteSidebarFooter() {
     )
   }
 
-  const displayName = userEmail.split("@")[0]
   return (
     <SidebarFooter>
       <SidebarMenu>
@@ -58,11 +54,11 @@ export default function SiteSidebarFooter() {
               >
                 <Avatar className="size-8 rounded-lg">
                   <AvatarFallback className="rounded-lg">
-                    {getUserInitials(userEmail)}
+                    {formatUtils.getUserInitials(userEmail)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{displayName}</span>
+                  <span className="truncate font-medium">{formatUtils.getDisplayName(userEmail)}</span>
                   <span className="truncate text-xs">{userEmail}</span>
                 </div>
                 <ChevronsUpDown className="ml-auto" />
@@ -78,11 +74,11 @@ export default function SiteSidebarFooter() {
                 <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                   <Avatar className="size-8 rounded-lg">
                     <AvatarFallback className="rounded-lg">
-                      {getUserInitials(userEmail)}
+                      {formatUtils.getUserInitials(userEmail)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">{displayName}</span>
+                    <span className="truncate font-medium">{formatUtils.getDisplayName(userEmail)}</span>
                     <span className="truncate text-xs">{userEmail}</span>
                   </div>
                 </div>

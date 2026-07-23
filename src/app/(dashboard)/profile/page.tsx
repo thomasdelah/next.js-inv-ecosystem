@@ -1,12 +1,17 @@
 import { Metadata } from "next";
+import { useTranslations } from "next-intl";
 
 export const metadata: Metadata = {
-  title: "Profile - Inv Ecosystem",
+  title: "Profile",
   description: "",
 };
 
 export default function ProfilePage() {
+  const t = useTranslations("Profile");
+
   return (
-    <span>Profile</span>
+    <main className="flex flex-col items-center h-full p-3">
+      <h1>{t("header")}</h1>
+    </main>
   )
 }
