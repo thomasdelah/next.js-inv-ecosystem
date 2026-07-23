@@ -1,11 +1,9 @@
 import LogoutButton from "@/lib/auth/ui/LogoutButton";
+import routes from "@/lib/navigation/domain/routes";
+import { redirect } from "next/navigation";
 
-export default function Home() {
-  return (
-    <div className="flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
-      <div className="flex w-full max-w-sm flex-col gap-6">
-        <LogoutButton />
-      </div>
-    </div>
-  );
+export default function HomePage() {
+  // Create landing page on the HomePage
+
+  return redirect(routes.ProfilePage());
 }

@@ -37,14 +37,19 @@ export const updateSession = async (request: NextRequest) => {
   const { data: { user } } = await supabase.auth.getUser();
   const url = request.nextUrl.clone();
 
+  // Define all accessible public routes
+  const isPublicRoute =
+    url.pathname.startsWith('/login') ||
+    url.pathname.startsWith('/api/callback/auth');
+
   // Redirect to login when unauthenticated
-  if (!user && !url.pathname.startsWith('/login')) {
+  if (!user && !isPublicRoute) {
     url.pathname = '/login';
     return NextResponse.redirect(url);
   }
 
   // Redirect to dashboard when logged in
-  if (user && url.pathname.startsWith('/login')) {
+  if (user && isPublicRoute) {
     url.pathname = '/';
     return NextResponse.redirect(url);
   }

@@ -9,5 +9,10 @@
       "formEmailInput": "Email",
       "formEmailPlaceholder": "Vul je email adres in",
       "formSubmit": "Verzend email link"
+    },
+    "Sidebar": {
+      "Footer": {
+        "logout": "Uitloggen"
+      }
     }
 }
